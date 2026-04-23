@@ -1,0 +1,15 @@
+{
+  "pages": [
+    "pages/home/index",
+    "pages/game/index"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#fff1f2",
+    "navigationBarTitleText": "💞 恋爱飞行棋 Pro",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#fff1f2"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}
