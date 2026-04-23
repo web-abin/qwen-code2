@@ -1,0 +1,143 @@
+```
+# Mini-program specific ignores
+miniprogram/.swan/
+miniprogram/dist/
+miniprogram/build/
+miniprogram/node_modules/
+miniprogram/yarn.lock
+miniprogram/package-lock.json
+miniprogram/.env
+miniprogram/.env.local
+miniprogram/*.log
+miniprogram/*.tmp
+
+# General ignores for mini-program development
+*.swan
+*.wxapkg
+*.swo
+*.tmp
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+coverage/
+.nyc_output/
+
+# Python related (if applicable)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git/modules/
+*.sublime-workspace
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
+
+# Java related (if applicable)
+*.class
+*.jar
+*.war
+*.ear
+hs_err_pid*
+.recommenders
+
+# C/C++ related (if applicable)
+*.o
+*.a
+*.obj
+*.out
+*.exe
+*.dll
+*.so
+*.dylib
+*.nib
+*.plist
+
+# Go related (if applicable)
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Node related (if applicable)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ruby related (if applicable)
+*.gem
+*.rbc
+extconf.rb
+Gemfile.lock
+vendor/cache/
+vendor/bundle/
+vendor/gems/
+vendor/ruby/
+
+# Rust related (if applicable)
+target/
+Cargo.lock
+
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
+```

@@ -1,0 +1,101 @@
+<view class="game-container">
+  <!-- 头部 -->
+  <view class="header">
+    <view class="back-btn" bindtap="goHome">🏠</view>
+    <view class="mode-badge">{{modeName}}</view>
+    <view wx:if="{{currentMode === 'custom'}}" 
+          class="edit-btn {{isEditing ? 'edit-active' : ''}}"
+          bindtap="toggleEditMode">
+      {{isEditing ? '完成' : '编辑'}}
+    </view>
+    <view wx:else class="placeholder"></view>
+  </view>
+
+  <!-- 棋盘容器 -->
+  <view class="board-container">
+    <view 
+      wx:for="{{board}}" 
+      wx:key="index"
+      class="cell {{getCellBg(item.index)}}"
+      style="left: {{item.x}}rpx; top: {{item.y}}rpx;"
+      bindtap="handleCellClick"
+      data-index="{{item.index}}"
+    >
+      <text wx:if="{{item.index === 0}}" class="go-text">GO</text>
+      <text wx:elif="{{item.index === 39}}" class="flag-text">🏁</text>
+      <block wx:else>
+        <text class="cell-number {{item.task || currentMode !== 'custom' ? 'text-white' : 'text-rose'}}">{{item.index}}</text>
+        <text wx:if="{{currentMode === 'custom' && item.task}}" class="star-icon">★</text>
+      </block>
+
+      <!-- 棋子 -->
+      <block wx:if="{{!isEditing}}">
+        <view wx:if="{{playerPos[0] === item.index}}" class="piece piece-girl">👧</view>
+        <view wx:if="{{playerPos[1] === item.index}}" class="piece piece-boy">👦</view>
+      </block>
+    </view>
+  </view>
+
+  <!-- 控制区域 -->
+  <view wx:if="{{!isEditing}}" class="control-panel">
+    <view class="players-info">
+      <view class="player {{currentPlayer === 0 ? 'active' : 'inactive'}}">
+        <view class="player-avatar {{currentPlayer === 0 ? 'active-turn' : ''}}">👧</view>
+        <text class="player-label {{currentPlayer === 0 ? 'text-rose' : 'text-gray'}}">女生回合</text>
+      </view>
+
+      <view class="dice-display">
+        <text class="dice-icon {{isRolling ? 'animate-bounce' : ''}}">{{isRolling ? '🎲' : diceIcons[diceValue - 1]}}</text>
+      </view>
+
+      <view class="player {{currentPlayer === 1 ? 'active' : 'inactive'}}">
+        <view class="player-avatar {{currentPlayer === 1 ? 'active-turn' : ''}}">👦</view>
+        <text class="player-label {{currentPlayer === 1 ? 'text-sky' : 'text-gray'}}">男生回合</text>
+      </view>
+    </view>
+
+    <button 
+      class="roll-btn {{isRolling ? 'disabled' : ''}}"
+      bindtap="roll"
+      disabled="{{isRolling}}"
+    >
+      {{isRolling ? '正在掷骰子...' : '掷骰子'}}
+    </button>
+  </view>
+
+  <!-- 编辑提示 -->
+  <view wx:if="{{isEditing}}" class="edit-hint">
+    <text class="hint-text">🛠️ 点击棋盘格设置专属任务</text>
+    <text class="clear-btn" bindtap="clearCustomBoard">清空数据</text>
+  </view>
+
+  <!-- 任务弹窗 -->
+  <view wx:if="{{modal.show}}" class="modal-overlay" bindtap="closeModal">
+    <view class="modal-content" catchtap="stopPropagation">
+      <text class="modal-icon">{{modal.icon}}</text>
+      <text class="modal-title">{{modal.title}}</text>
+      <scroll-view class="modal-scroll" scroll-y="true">
+        <text class="modal-text">{{modal.content}}</text>
+      </scroll-view>
+      <button class="modal-btn" bindtap="closeModal">任务完成</button>
+    </view>
+  </view>
+
+  <!-- 自定义输入弹窗 -->
+  <view wx:if="{{customInput.show}}" class="modal-overlay" bindtap="closeCustomInput">
+    <view class="custom-input-content" catchtap="stopPropagation">
+      <text class="custom-title">第 {{customInput.index}} 格任务</text>
+      <textarea 
+        class="custom-textarea"
+        value="{{customInput.text}}"
+        bindinput="onInput"
+        placeholder="在此输入你的创意任务..."
+        maxlength="200"
+      />
+      <view class="custom-buttons">
+        <button class="cancel-btn" bindtap="closeCustomInput">取消</button>
+        <button class="save-btn" bindtap="saveCustom">保存</button>
+      </view>
+    </view>
+  </view>
+</view>
