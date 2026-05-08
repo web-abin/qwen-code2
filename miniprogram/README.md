@@ -6,7 +6,7 @@
 miniprogram/
 ├── app.js                 # 小程序入口文件（包含题库数据）
 ├── app.json              # 小程序全局配置
-├── project.config.json   # 项目配置文件（已配置 appid: wx263f28168ac7a3a1）
+├── project.config.json   # 项目配置文件（已配置 appid: wx33c8a193766be345）
 ├── sitemap.json          # 站点地图配置
 └── pages/
     ├── home/             # 首页（模式选择）
@@ -33,7 +33,7 @@ miniprogram/
    - 打开微信开发者工具
    - 点击「+」或「导入项目」
    - 选择 `/workspace/miniprogram` 目录
-   - 项目 APPID 已配置为 `wx263f28168ac7a3a1`
+   - 项目 APPID 已配置为 `wx33c8a193766be345`
 
 3. **登录开发者账号**
    - 使用微信小程序管理员账号扫码登录
@@ -89,7 +89,7 @@ npm install -g miniprogram-simulate
 
 ## 注意事项
 
-1. **APPID 权限**：确保你有权使用 `wx263f28168ac7a3a1` 这个 APPID
+1. **APPID 权限**：确保你有权使用 `wx33c8a193766be345` 这个 APPID
 2. **内容审核**：部分亲密互动内容可能需要在提交审核时说明
 3. **字体加载**：Google Fonts 在国内可能加载较慢，建议考虑替换或使用系统字体
 4. **真机测试**：务必在真机上测试动画性能和触摸反馈

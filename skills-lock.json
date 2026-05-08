@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "geno-init": {
+      "source": "web-abin/OpenGeno",
+      "sourceType": "github",
+      "skillPath": "skills/geno-init/SKILL.md",
+      "computedHash": "87fb2e6bcd26d7aa06dd6f0939714f384dcfad249fe74b82890bc0316fc97a6a"
+    },
+    "geno-sync": {
+      "source": "web-abin/OpenGeno",
+      "sourceType": "github",
+      "skillPath": "skills/geno-sync/SKILL.md",
+      "computedHash": "7812a3368e3af5e53b0bdbc4f6fb0b7b0ddafebcbe376bbd53b4c05bf15e7ab8"
+    }
+  }
+}

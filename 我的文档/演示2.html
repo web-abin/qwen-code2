@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>💞 恋爱飞行棋</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --safe-area-bottom: env(safe-area-inset-bottom);
+    }
+    body {
+      font-family: "微软雅黑", "PingFang SC", sans-serif;
+      background: #fff1f2;
+      transition: background 0.4s ease;
+      touch-action: manipulation;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .game-font { font-weight: bold; }
+    .piece {
+      z-index: 100;
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+    }
+    .board-container {
+      position: relative;
+      width: 340px;
+      height: 480px;
+      margin: 0 auto;
+      transform-origin: top center;
+    }
+    @media (max-width: 375px) {.board-container {transform: scale(0.9);}}
+    @media (min-width: 400px) {.board-container {transform: scale(1.1);}}
+    .cell {transition: transform 0.1s;}
+    .cell:active {transform: scale(0.9);}
+    .modal-blur {
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    /* 默认骰子图标：上下浮动 */
+    .dice-icon {
+      font-size: 82px;
+      line-height: 1;
+      animation: diceFloat 1.8s ease-in-out infinite;
+      cursor: pointer;
+      user-select: none;
+    }
+    @keyframes diceFloat {
+      0%,100% { transform: translateY(0); }
+      50%     { transform: translateY(-8px); }
+    }
+
+    /* 3D骰子容器 */
+    .dice-3d {
+      width: 70px;
+      height: 70px;
+      margin-bottom: 16px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.4s cubic-bezier(0.2,0.8,0.2,1);
+    }
+
+    /* 摇晃旋转动画 */
+    .dice-shake { animation: diceRoll3d 0.8s linear infinite; }
+    @keyframes diceRoll3d {
+      0%   { transform: rotateX(0deg)   rotateY(0deg); }
+      100% { transform: rotateX(360deg) rotateY(720deg); }
+    }
+
+    /* 骰子六个面 */
+    .face {
+      position: absolute;
+      width: 70px;
+      height: 70px;
+      background: #e8e8e8;
+      border-radius: 12px;
+      padding: 10px;
+      box-shadow:
+        inset 0 0 8px rgba(0,0,0,0.06),
+        0 2px 8px rgba(0,0,0,0.12);
+      display: grid;
+    }
+    .face.front  { transform: translateZ(35px); }
+    .face.back   { transform: rotateY(180deg) translateZ(35px); }
+    .face.left   { transform: rotateY(-90deg) translateZ(35px); }
+    .face.right  { transform: rotateY(90deg)  translateZ(35px); }
+    .face.top    { transform: rotateX(90deg)  translateZ(35px); }
+    .face.bottom { transform: rotateX(-90deg) translateZ(35px); }
+
+    /* 点数 */
+    .dot {
+      width: 14px;
+      height: 14px;
+      background: radial-gradient(circle at 30% 30%, #333, #000);
+      border-radius: 50%;
+      box-shadow: inset 0 1px 2px rgba(255,255,255,0.3);
+      place-self: center;
+    }
+    .f1 { grid-template-columns: 1fr; }
+    .f2 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+    .f2 .dot:nth-child(1) { grid-area: 2 / 1 / 3 / 2; }
+    .f2 .dot:nth-child(2) { grid-area: 1 / 2 / 2 / 3; }
+    .f3 { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
+    .f3 .dot:nth-child(1) { grid-area: 3 / 1 / 4 / 2; }
+    .f3 .dot:nth-child(2) { grid-area: 2 / 2 / 3 / 3; }
+    .f3 .dot:nth-child(3) { grid-area: 1 / 3 / 2 / 4; }
+    .f4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+    .f5 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+    .f5 .dot-center { grid-area: 2 / 1 / 3 / 3; }
+    .f6 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
+
+    .scale-up {animation: scaleUp 0.3s ease-out forwards;}
+    @keyframes scaleUp {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body class="safe-p-bottom">
+  <div id="app" class="w-full max-w-md mx-auto min-h-screen flex flex-col justify-center items-center">
+    <!-- 首页 -->
+    <div v-if="view === 'home'" class="relative w-full h-screen flex flex-col justify-center items-center  space-y-6 px-4 pt-10">
+      <!-- <img src="../miniprogram/assets/bg2.png" class="absolute left-0 top-0  w-full  h-full object-cover" /> -->
+      <div class="text-center mb-16">
+        <h1 class="game-font text-5xl text-rose-500 drop-shadow-md">恋爱飞行棋</h1>
+        <p class="text-rose-300 text-xs mt-2 tracking-widest font-bold">情侣互动小游戏</p>
+      </div>
+      <div class="grid gap-4 px-4">
+        <button
+          v-for="(mode, key) in modes"
+          :key="key"
+          @click="initGame(key)"
+          class="group relative bg-white py-5 rounded-[2rem] shadow-lg border-b-4 border-rose-100 active:translate-y-1 active:border-b-0 transition-all flex items-center justify-between px-8"
+        >
+          <div class="flex items-center gap-4">
+            <img :src="mode.icon" class="w-10 h-10 object-contain" />
+            <span class="font-bold text-rose-600 text-lg">{{ mode.name }}</span>
+          </div>
+          <img src="../miniprogram/assets/right.png" class="w-6 h-6 object-contain" />
+        </button>
+      </div>
+    </div>
+
+    <!-- 游戏主界面 -->
+    <div v-if="view === 'game'" class="w-full flex flex-col items-center relative justify-center flex-1">
+      <header class="w-full flex justify-between items-center mb-4 z-10 absolute top-4 left-0 right-0 px-4">
+        <button @click="goHome" class="w-10 h-10 rounded-2xl bg-white shadow-md flex items-center justify-center">
+          <img src="../miniprogram/assets/home.png" class="w-7 h-7 object-contain" />
+        </button>
+        <div class="px-5 py-1.5 bg-white/80 rounded-full shadow-sm backdrop-blur-md">
+          <span class="game-font text-rose-500 text-sm">{{ modes[currentMode].name }} - {{ currentSubTheme }}</span>
+        </div>
+        <div class="w-10"></div>
+      </header>
+
+      <!-- 飞行棋盘 垂直居中 -->
+      <div class="board-container bg-white/40 rounded-[3rem] p-4 shadow-inner border border-white/50">
+        <div
+          v-for="(cell, index) in board"
+          :key="index"
+          class="cell absolute w-10 h-10 rounded-xl flex flex-col items-center justify-center shadow-sm"
+          :class="[getCellBg(index)]"
+          :style="{ left: cell.x + 'px', top: cell.y + 'px' }"
+        >
+          <img v-if="index === 0" src="../miniprogram/assets/start.png" class="w-9 h-9 object-contain" />
+          <img v-else-if="index === 39" src="../miniprogram/assets/end.png" class="w-9 h-9 object-contain" />
+          <template v-else>
+            <span class="text-[10px] font-bold text-white/70">{{ index }}</span>
+          </template>
+          <div v-if="playerPos[0] === index" class="piece absolute -top-4 -left-1" :style="getPieceStyle(0)"></div>
+          <div v-if="playerPos[1] === index" class="piece absolute -bottom-4 -right-1" :style="getPieceStyle(1)"></div>
+        </div>
+      </div>
+
+      <!-- 右侧垂直按钮组：底部60px 右侧24px -->
+      <div class="fixed flex flex-col gap-3" style="bottom: 40px; right: 24px; z-index: 40;">
+        <button @click="openRateModal" class="px-4 py-2 bg-white rounded-xl shadow-md text-rose-500 font-bold">比例设置</button>
+        <button @click="openThemeModal" class="px-4 py-2 bg-white rounded-xl shadow-md text-rose-500 font-bold">切换主题</button>
+      </div>
+
+      <!-- 骰子：底部60px 水平居中（始终显示） -->
+      <div class="fixed left-1/2 -translate-x-1/2 z-50 flex flex-col items-center" style="bottom: 60px;">
+        <!-- 初始态：浮动 emoji 骰子 -->
+        <div v-if="diceState === 'initial'" @click="roll" class="dice-icon">🎲</div>
+
+        <!-- 摇晃 / 结果态：3D 骰子 -->
+        <div v-else
+             class="dice-3d"
+             :class="{ 'dice-shake': diceState === 'rolling' }"
+             :style="diceTransform">
+          <div class="face front f1"><div class="dot"></div></div>
+          <div class="face back f2"><div class="dot"></div><div class="dot"></div></div>
+          <div class="face left f3"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          <div class="face right f4"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          <div class="face top f5">
+            <div class="dot"></div><div class="dot"></div>
+            <div class="dot dot-center"></div>
+            <div class="dot"></div><div class="dot"></div>
+          </div>
+          <div class="face bottom f6">
+            <div class="dot"></div><div class="dot"></div>
+            <div class="dot"></div><div class="dot"></div>
+            <div class="dot"></div><div class="dot"></div>
+          </div>
+        </div>
+
+        <p class="mt-3 text-white text-base font-bold px-4 py-1 rounded-full backdrop-blur-sm"
+           :class="currentPlayer === 0 ? 'bg-rose-400/80' : 'bg-sky-400/80'">
+          <template v-if="diceState === 'initial'">{{ currentPlayer === 0 ? '女生回合' : '男生回合' }}</template>
+          <template v-else-if="diceState === 'rolling'">掷骰子中...</template>
+          <template v-else>掷出 {{ diceValue }} 点</template>
+        </p>
+      </div>
+    </div>
+
+    <!-- ============ 自定义飞行棋：列表视图 ============ -->
+    <div v-if="view === 'custom-list'" class="w-full flex flex-col items-center pt-4 pb-32 flex-1">
+      <header class="w-full flex justify-between items-center mb-4 px-4">
+        <button @click="goHome" class="w-10 h-10 rounded-2xl bg-white shadow-md flex items-center justify-center">
+          <img src="../miniprogram/assets/home.png" class="w-7 h-7 object-contain" />
+        </button>
+        <div class="px-5 py-1.5 bg-white/80 rounded-full shadow-sm backdrop-blur-md">
+          <span class="game-font text-rose-500 text-sm">我的自定义飞行棋</span>
+        </div>
+        <div class="w-10"></div>
+      </header>
+
+      <p class="text-xs text-gray-500 mb-4">已使用 <span class="font-bold text-rose-500">{{ customThemes.length }}</span> / {{ customQuota }} 个名额</p>
+
+      <div class="w-full px-4 space-y-3">
+        <div v-for="theme in customThemes" :key="theme.id"
+             @click="playCustomTheme(theme)"
+             class="bg-white rounded-2xl p-4 shadow-md flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform">
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-gray-800 truncate">{{ theme.name }}</div>
+            <div class="text-xs text-gray-400 mt-1">{{ countFilled(theme) }} / 38 格已填 · 点击开始游戏</div>
+          </div>
+          <div class="flex gap-2 ml-3 shrink-0">
+            <button @click.stop="editCustom(theme.id)" class="px-3 py-1.5 bg-rose-50 text-rose-500 rounded-lg text-sm font-bold active:scale-95">编辑</button>
+            <button @click.stop="askDeleteCustom(theme.id)" class="px-3 py-1.5 bg-gray-100 text-gray-500 rounded-lg text-sm font-bold active:scale-95">删除</button>
+          </div>
+        </div>
+      </div>
+
+      <button @click="tryCreateCustom"
+              class="fixed left-1/2 -translate-x-1/2 z-40 w-14 h-14 rounded-full bg-rose-500 text-white text-3xl shadow-2xl active:scale-95 flex items-center justify-center"
+              style="bottom: 60px;">+</button>
+    </div>
+
+    <!-- ============ 自定义飞行棋：编辑视图 ============ -->
+    <div v-if="view === 'custom-edit'" class="w-full flex flex-col items-center relative justify-center flex-1">
+      <header class="w-full flex justify-between items-center mb-4 z-10 absolute top-4 left-0 right-0 px-4">
+        <button @click="goHome" class="w-10 h-10 rounded-2xl bg-white shadow-md flex items-center justify-center">
+          <img src="../miniprogram/assets/home.png" class="w-7 h-7 object-contain" />
+        </button>
+        <div class="px-5 py-1.5 bg-white/80 rounded-full shadow-sm backdrop-blur-md">
+          <span class="game-font text-rose-500 text-sm">编辑自定义飞行棋</span>
+        </div>
+        <div class="w-10"></div>
+      </header>
+
+      <!-- 棋盘（点击格子打开编辑弹窗） -->
+      <div class="board-container bg-white/40 rounded-[3rem] p-4 shadow-inner border border-white/50">
+        <div
+          v-for="(cell, index) in editBoard"
+          :key="index"
+          class="cell absolute w-10 h-10 rounded-xl flex flex-col items-center justify-center shadow-sm cursor-pointer"
+          :class="[getEditCellBg(index), editingCellIdx === index && cellEditModal ? 'ring-2 ring-rose-400 ring-offset-2' : '']"
+          :style="{ left: cell.x + 'px', top: cell.y + 'px' }"
+          @click="openCellEdit(index)"
+        >
+          <img v-if="index === 0" src="../miniprogram/assets/start.png" class="w-9 h-9 object-contain" />
+          <img v-else-if="index === 39" src="../miniprogram/assets/end.png" class="w-9 h-9 object-contain" />
+          <span v-else-if="!cell.type" class="text-gray-400 text-base font-bold">+</span>
+          <span v-else class="text-[10px] font-bold text-white/80">{{ index }}</span>
+        </div>
+      </div>
+
+      <!-- 底部保存按钮（替代骰子区） -->
+      <div class="fixed left-1/2 -translate-x-1/2 z-50" style="bottom: 60px;">
+        <button @click="openSaveName"
+                class="px-12 py-4 bg-rose-500 text-white rounded-2xl font-bold shadow-2xl active:scale-95">
+          保存
+        </button>
+      </div>
+    </div>
+
+    <!-- 普通任务弹窗 -->
+    <div v-if="modal.show && !isFightTask" class="fixed inset-0 z-[200] flex items-center justify-center p-6 modal-blur bg-black/20">
+      <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-xs text-center shadow-2xl scale-up border-4 border-rose-50">
+        <img :src="modal.icon" class="w-20 h-20 object-contain mx-auto mb-4" />
+        <h3 class="text-xl font-bold text-gray-800 mb-4">{{ modal.title }}</h3>
+        <div class="max-h-48 overflow-y-auto mb-6">
+          <p class="text-gray-600 font-medium text-lg leading-relaxed whitespace-pre-wrap">{{ modal.content }}</p>
+        </div>
+        <button @click="closeNormalModal" class="w-full bg-rose-500 text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95">
+          任务完成
+        </button>
+      </div>
+    </div>
+
+    <!-- 对抗任务弹窗（男方胜 / 女方胜） -->
+    <div v-if="modal.show && isFightTask" class="fixed inset-0 z-[200] flex items-center justify-center p-6 modal-blur bg-black/20">
+      <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-xs text-center shadow-2xl scale-up border-4 border-rose-50">
+        <img :src="modal.icon" class="w-20 h-20 object-contain mx-auto mb-4" />
+        <h3 class="text-xl font-bold text-gray-800 mb-4">{{ modal.title }}</h3>
+        <div class="max-h-48 overflow-y-auto mb-6">
+          <p class="text-gray-600 font-medium text-lg leading-relaxed whitespace-pre-wrap">{{ modal.content }}</p>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <button @click="fightResult('boy')" class="py-4 bg-sky-500 text-white rounded-2xl font-bold shadow-md">男方胜</button>
+          <button @click="fightResult('girl')" class="py-4 bg-rose-500 text-white rounded-2xl font-bold shadow-md">女方胜</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 五种格子比例设置弹窗 -->
+    <div v-if="rateModal" class="fixed inset-0 z-[200] flex items-center justify-center p-6 modal-blur bg-black/60">
+      <div class="bg-white rounded-[2rem] p-6 w-full max-w-xs shadow-2xl scale-up">
+        <h3 class="font-bold text-rose-500 mb-4 text-center">格子比例设置</h3>
+        <div class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-3 items-center mb-4 text-sm">
+          <!-- 普通任务 -->
+          <div>
+            <div class="font-medium text-gray-700 flex items-center gap-1.5">
+              <img src="../miniprogram/assets/type-renwu.png" class="w-5 h-5 object-contain" /> 普通任务
+            </div>
+            <div class="text-xs text-gray-400 mt-0.5">如：牵手10秒</div>
+          </div>
+          <div class="flex items-center gap-1">
+            <input v-model.number="rate.task" type="number" min="0" max="100" class="w-14 p-1 border rounded text-center">
+            <span>%</span>
+          </div>
+          <!-- 真心话 -->
+          <div>
+            <div class="font-medium text-gray-700 flex items-center gap-1.5">
+              <img src="../miniprogram/assets/type-zhenxinhua.png" class="w-5 h-5 object-contain" /> 真心话
+            </div>
+            <div class="text-xs text-gray-400 mt-0.5">如：心动瞬间</div>
+          </div>
+          <div class="flex items-center gap-1">
+            <input v-model.number="rate.truth" type="number" min="0" max="100" class="w-14 p-1 border rounded text-center">
+            <span>%</span>
+          </div>
+          <!-- 双人挑战 -->
+          <div>
+            <div class="font-medium text-gray-700 flex items-center gap-1.5">
+              <img src="../miniprogram/assets/type-shuangren.png" class="w-5 h-5 object-contain" /> 双人挑战
+            </div>
+            <div class="text-xs text-gray-400 mt-0.5">如：猜最爱颜色</div>
+          </div>
+          <div class="flex items-center gap-1">
+            <input v-model.number="rate.test" type="number" min="0" max="100" class="w-14 p-1 border rounded text-center">
+            <span>%</span>
+          </div>
+          <!-- 情侣对抗 -->
+          <div>
+            <div class="font-medium text-gray-700 flex items-center gap-1.5">
+              <img src="../miniprogram/assets/type-duikang.png" class="w-5 h-5 object-contain" /> 情侣对抗
+            </div>
+            <div class="text-xs text-gray-400 mt-0.5">如：比眨眼</div>
+          </div>
+          <div class="flex items-center gap-1">
+            <input v-model.number="rate.fight" type="number" min="0" max="100" class="w-14 p-1 border rounded text-center">
+            <span>%</span>
+          </div>
+          <!-- 剧情任务 -->
+          <div>
+            <div class="font-medium text-gray-700 flex items-center gap-1.5">
+              <img src="../miniprogram/assets/type-juqing.png" class="w-5 h-5 object-contain" /> 剧情任务
+            </div>
+            <div class="text-xs text-gray-400 mt-0.5">如：雨天初见</div>
+          </div>
+          <div class="flex items-center gap-1">
+            <input v-model.number="rate.story" type="number" min="0" max="100" class="w-14 p-1 border rounded text-center">
+            <span>%</span>
+          </div>
+        </div>
+        <p class="text-xs text-gray-400 text-center mb-4">总和需为100%</p>
+        <div class="flex gap-2">
+          <button @click="rateModal = false" class="flex-1 py-3 bg-gray-100 rounded-xl font-bold text-gray-500">取消</button>
+          <button @click="saveRate" class="flex-1 py-3 bg-rose-500 text-white rounded-xl font-bold">保存生效</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 子主题选择弹窗 -->
+    <div v-if="themeModal" class="fixed inset-0 z-[200] flex items-center justify-center p-6 modal-blur bg-black/60">
+      <div class="bg-white rounded-[2rem] p-6 w-full max-w-xs shadow-2xl scale-up">
+        <h3 class="font-bold text-rose-500 mb-4 text-center">选择子主题</h3>
+        <div class="space-y-3 max-h-72 overflow-y-auto">
+          <div
+            v-for="item in currentSubThemes"
+            @click="selectSubTheme(item)"
+            class="p-3 border-2 rounded-xl cursor-pointer transition-all"
+            :class="currentSubTheme===item?'border-rose-500 bg-rose-50':'border-gray-200'"
+          >
+            <span class="font-bold text-gray-700">{{ item }}</span>
+          </div>
+        </div>
+        <button @click="themeModal = false" class="w-full mt-4 py-3 bg-gray-100 rounded-xl font-bold text-gray-500">关闭</button>
+      </div>
+    </div>
+
+    <!-- ============ 自定义格子编辑弹窗 ============ -->
+    <div v-if="cellEditModal && editingCustom" class="fixed inset-0 z-[300] flex items-center justify-center p-6 modal-blur bg-black/40">
+      <div class="bg-white rounded-[2rem] p-6 w-full max-w-xs shadow-2xl scale-up">
+        <h3 class="font-bold text-rose-500 mb-1 text-center">第 {{ editingCellIdx }} 格</h3>
+        <p class="text-xs text-gray-400 text-center mb-4">共 38 格</p>
+
+        <p class="text-xs text-gray-500 mb-2">选择类型</p>
+        <div class="grid grid-cols-3 gap-2 mb-4">
+          <button v-for="t in cellTypes" :key="t.key"
+                  @click="setEditingType(t.key)"
+                  class="px-1 py-2 rounded-xl text-xs font-bold border-2 transition-all flex flex-col items-center gap-1"
+                  :class="editingCustom.cells[editingCellIdx-1].type === t.key ? t.activeCls : 'border-gray-200 bg-white text-gray-500'">
+            <img :src="t.icon" class="w-6 h-6 object-contain" />
+            <span>{{ t.name }}</span>
+          </button>
+        </div>
+
+        <p class="text-xs text-gray-500 mb-1">任务内容</p>
+        <textarea v-model="editingCustom.cells[editingCellIdx-1].content"
+                  class="w-full p-2 border rounded-lg text-sm resize-none mb-3 outline-none focus:border-rose-400"
+                  rows="2" placeholder="如：拥抱10秒"></textarea>
+
+        <div v-if="editingCustom.cells[editingCellIdx-1].type === 'test'">
+          <p class="text-xs text-gray-500 mb-1">失败惩罚</p>
+          <textarea v-model="editingCustom.cells[editingCellIdx-1].punish"
+                    class="w-full p-2 border rounded-lg text-sm resize-none mb-3 outline-none focus:border-rose-400"
+                    rows="2" placeholder="如：被对方捏脸 5 秒"></textarea>
+        </div>
+
+        <div class="flex gap-2">
+          <button @click="cellEditModal = false"
+                  class="flex-1 py-3 bg-gray-100 rounded-xl font-bold text-gray-500 active:scale-95">保存</button>
+          <button @click="saveCellAndNext"
+                  class="flex-1 py-3 bg-rose-500 text-white rounded-xl font-bold active:scale-95"
+                  :disabled="editingCellIdx >= 38">下一格</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 命名保存弹窗 ============ -->
+    <div v-if="saveNameModal" class="fixed inset-0 z-[300] flex items-center justify-center p-6 modal-blur bg-black/60">
+      <div class="bg-white rounded-[2rem] p-6 w-full max-w-xs shadow-2xl scale-up">
+        <h3 class="font-bold text-rose-500 mb-1 text-center">命名你的飞行棋</h3>
+        <p class="text-xs text-gray-400 text-center mb-4">保存后可在「切换主题」里选择</p>
+        <input v-model="customNameInput" type="text" maxlength="20" placeholder="如：我们的甜蜜回忆"
+               class="w-full p-3 border-2 border-rose-100 rounded-xl mb-4 text-sm focus:border-rose-400 outline-none">
+        <div class="flex gap-2">
+          <button @click="saveNameModal = false"
+                  class="flex-1 py-3 bg-gray-100 rounded-xl font-bold text-gray-500 active:scale-95">返回编辑</button>
+          <button @click="confirmSaveName"
+                  class="flex-1 py-3 bg-rose-500 text-white rounded-xl font-bold active:scale-95">保存并去体验</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 删除二次确认弹窗 ============ -->
+    <div v-if="deleteConfirm.show" class="fixed inset-0 z-[300] flex items-center justify-center p-6 modal-blur bg-black/60">
+      <div class="bg-white rounded-[2rem] p-6 w-full max-w-xs shadow-2xl scale-up text-center">
+        <img src="../miniprogram/assets/delete.png" class="w-16 h-16 object-contain mx-auto mb-3" />
+        <h3 class="font-bold text-gray-800 mb-2">确认删除？</h3>
+        <p class="text-sm text-gray-500 mb-4">删除后无法恢复</p>
+        <div class="flex gap-2">
+          <button @click="deleteConfirm.show = false"
+                  class="flex-1 py-3 bg-gray-100 rounded-xl font-bold text-gray-500 active:scale-95">取消</button>
+          <button @click="confirmDeleteCustom"
+                  class="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold active:scale-95">确认删除</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 配额上限提示 ============ -->
+    <div v-if="limitAlert" class="fixed inset-0 z-[300] flex items-center justify-center p-6 modal-blur bg-black/60">
+      <div class="bg-white rounded-[2rem] p-6 w-full max-w-xs shadow-2xl scale-up text-center">
+        <img src="../miniprogram/assets/limit.png" class="w-16 h-16 object-contain mx-auto mb-3" />
+        <h3 class="font-bold text-gray-800 mb-2">已达创建上限</h3>
+        <p class="text-sm text-gray-500 mb-4">
+          当前可创建 <span class="font-bold text-rose-500">{{ customQuota }}</span> 个，已创建 {{ customThemes.length }} 个。<br>
+          每分享一次解锁 +1 名额。
+        </p>
+        <div class="flex gap-2">
+          <button @click="limitAlert = false"
+                  class="flex-1 py-3 bg-gray-100 rounded-xl font-bold text-gray-500 active:scale-95">取消</button>
+          <button @click="shareUnlock"
+                  class="flex-1 py-3 bg-rose-500 text-white rounded-xl font-bold active:scale-95">去分享</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 骰子摇晃总时长（毫秒）—— 调节此常量即可改变掷骰子动画的快慢
+    const ROLL_DURATION = 1200
+
+    // 骰子六个面的定格角度（与 自定义骰子.html 一致）
+    const angleList = [
+      {x:0,    y:0},     // 1
+      {x:0,    y:180},   // 2
+      {x:0,    y:-90},   // 3
+      {x:0,    y:90},    // 4
+      {x:-90,  y:0},     // 5
+      {x:90,   y:0}      // 6
+    ]
+
+    // 回合背景色：女生粉、男生蓝
+    const BG_FEMALE = '#fff1f2'
+    const BG_MALE   = '#e0f2fe'
+
+    // 自定义飞行棋本地存储 key
+    const STORAGE_THEMES = 'flyChess.customThemes'
+    const STORAGE_QUOTA  = 'flyChess.customQuota'
+    const DEFAULT_QUOTA  = 1
+
+    // 自定义格子类型选项（编辑弹窗用）
+    const CELL_TYPES = [
+      { key: 'task',  name: '普通任务', icon: '../miniprogram/assets/type-renwu.png',     activeCls: 'border-purple-400 bg-purple-50 text-purple-600' },
+      { key: 'truth', name: '真心话',   icon: '../miniprogram/assets/type-zhenxinhua.png', activeCls: 'border-pink-400 bg-pink-50 text-pink-600' },
+      { key: 'test',  name: '双人挑战', icon: '../miniprogram/assets/type-shuangren.png',  activeCls: 'border-emerald-400 bg-emerald-50 text-emerald-600' },
+      { key: 'fight', name: '情侣对抗', icon: '../miniprogram/assets/type-duikang.png',    activeCls: 'border-orange-400 bg-orange-50 text-orange-600' },
+      { key: 'story', name: '剧情任务', icon: '../miniprogram/assets/type-juqing.png',     activeCls: 'border-sky-400 bg-sky-50 text-sky-600' }
+    ]
+
+    // 棋盘 38 个普通格 + 起点 + 终点的路径坐标（共 40 格）
+    const generatePath = () => {
+      const path = []
+      const startX = 290, startY = 10, gap = 46
+      for(let i=0;i<7;i++) path.push({x:startX - i*gap,y:startY})
+      for(let i=1;i<9;i++) path.push({x:startX - 6*gap,y:startY + i*gap})
+      for(let i=1;i<7;i++) path.push({x:startX - 6*gap + i*gap,y:startY + 8*gap})
+      for(let i=1;i<7;i++) path.push({x:startX,y:startY + 8*gap - i*gap})
+      for(let i=1;i<5;i++) path.push({x:startX - i*gap,y:startY + 2*gap})
+      for(let i=1;i<5;i++) path.push({x:startX - 4*gap,y:startY + 2*gap + i*gap})
+      for(let i=1;i<3;i++) path.push({x:startX - 4*gap + i*gap,y:startY + 6*gap})
+      for(let i=1;i<3;i++) path.push({x:startX - 2*gap,y:startY + 6*gap - i*gap})
+      path.push({x:startX - 3*gap,y:startY + 4*gap})
+      return path
+    }
+
+    const makeEmptyCells = () => Array.from({length: 38}, () => ({ type: null, content: '', punish: '' }))
+
+    const { createApp, ref, computed, watchEffect } = Vue
+    createApp({
+      setup() {
+        const view = ref('home')
+        const currentMode = ref('love')
+        const playerPos = ref([0, 0])
+        const currentPlayer = ref(0)
+        const diceValue = ref(1)
+        const diceState = ref('initial') // 'initial' | 'rolling' | 'result'
+        const movingPlayer = ref(null)   // 0 = 女生在走，1 = 男生在走，null = 站立
+        const moveStep = ref(0)          // 移动步数累计，用于左右腿交替
+        const modal = ref({ show:false, title:'', content:'', icon:'' })
+        const isFightTask = ref(false)
+        const rateModal = ref(false)
+        const themeModal = ref(false)
+
+        // 比例：任务50 挑战20 真心话10 对抗10 剧情10
+        const rate = ref({ task:50, test:20, truth:10, fight:10, story:10 })
+
+        // 首页模式
+        const modes = {
+          love:   { name: '情侣飞行棋',   icon: '../miniprogram/assets/menu-default.png' },
+          shy:    { name: '羞羞飞行棋',   icon: '../miniprogram/assets/menu-xx.png' },
+          custom: { name: '自定义飞行棋', icon: '../miniprogram/assets/menu-custom.png' }
+        }
+
+        // 子主题配置
+        const subThemes = ref({
+          love: ['主题·心动','主题·甜蜜','主题·深情'],
+          shy: ['主题·亲密','主题·温柔']
+        })
+        const currentSubTheme = ref('主题·心动')
+
+        // ============ 自定义飞行棋 state ============
+        const customThemes = ref([])           // [{ id, name, cells: [{type,content,punish}] }]
+        const customQuota  = ref(DEFAULT_QUOTA) // 可创建上限
+        const editingCustom    = ref(null)     // 编辑中的草稿 {id?, name, cells}
+        const editingCellIdx   = ref(1)        // 当前编辑的格子序号 1-38
+        const cellEditModal    = ref(false)
+        const saveNameModal    = ref(false)
+        const customNameInput  = ref('')
+        const deleteConfirm    = ref({ show: false, id: null })
+        const limitAlert       = ref(false)
+        const activeCustomTheme = ref(null)    // 正在游玩的自定义主题
+        const cellTypes = CELL_TYPES
+
+        // 从 localStorage 载入
+        try {
+          const t = JSON.parse(localStorage.getItem(STORAGE_THEMES) || '[]')
+          if(Array.isArray(t)) customThemes.value = t
+          const q = parseInt(localStorage.getItem(STORAGE_QUOTA), 10)
+          if(!isNaN(q) && q >= DEFAULT_QUOTA) customQuota.value = q
+        } catch(e) {}
+
+        const persistCustom = () => {
+          try {
+            localStorage.setItem(STORAGE_THEMES, JSON.stringify(customThemes.value))
+            localStorage.setItem(STORAGE_QUOTA, String(customQuota.value))
+          } catch(e) {}
+        }
+
+        // 切换主题弹窗中显示的列表：内置主题 + 自定义主题
+        const currentSubThemes = computed(() => {
+          if(currentMode.value === 'love'){
+            return [...subThemes.value.love, ...customThemes.value.map(t => t.name)]
+          }
+          if(currentMode.value === 'shy'){
+            return subThemes.value.shy
+          }
+          return []
+        })
+
+      // task：普通任务  test：双人挑战  truth：真心话  fight：情侣对抗  story：剧情任务
+        // 题库
+        const libraries = ref({
+          love: {
+            "主题·心动":{
+              task:["对视10秒","牵手10秒","摸头杀","夸对方","拥抱3秒","亲对方额头","喂零食","揉肩膀","比心","微笑对视","靠肩膀","说情话","拍合照","暖手","整理头发","击掌","贴脸","轻拍后背","眨眼互动","牵手转圈"],
+              test:["最爱颜色","生日月份","鞋码","爱好","爱吃水果","害怕东西","喜欢季节","常听歌曲","想去城市","早餐习惯","身高","幸运数字","喜欢动物","起床习惯","爱看电影","喜欢花","口头禅","想去景点","讨厌食物","休闲活动"],
+              truth:["初见印象","心动瞬间","喜欢穿搭","想一起做的事","最感动瞬间","喜欢称呼","想去旅行地","喜欢对方哪里","最合拍地方","想一起吃的饭","喜欢对方动作","最安心时刻","喜欢对方味道","最珍惜瞬间","想一起看的景","喜欢对方性格","最想一起周末","喜欢对方笑容","想一起养宠物","最想对方陪伴"],
+              fight:["比眨眼","比憋笑","比害羞","比安静","比心跳","比手温","比对视","比撒娇","比微笑","比拥抱","比牵手","比情话","比可爱","比温柔","比耐心","比心动","比卖萌","比暖心","比默契","比甜蜜"],
+              story:["雨天初见","一日一见","无人岛","交换身份","回到初见","突然消失","瞬移旅行","生病照顾","小家布置","时间暂停","雪地相遇","一封书信","穿越未来","失眠陪伴","露营准备","生气哄你","超能力","海边日落","半夜饥饿","回到过去"],
+            },
+            // "主题·心动":{
+            //   task:["对视10秒","牵手10秒","摸头杀","夸对方","拥抱3秒","亲额头","喂零食","揉肩膀","比心","微笑对视","靠肩膀","说情话","拍合照","暖手","整理头发","击掌","贴脸","轻拍后背","眨眼互动","牵手转圈"],
+            //   test:["最爱颜色","生日月份","鞋码","爱好","爱吃水果","害怕东西","喜欢季节","常听歌曲","想去城市","早餐习惯","身高","幸运数字","喜欢动物","起床习惯","爱看电影","喜欢花","口头禅","想去景点","讨厌食物","休闲活动"],
+            //   truth:["初见印象","心动瞬间","喜欢穿搭","想一起做的事","最感动瞬间","喜欢称呼","想去旅行地","喜欢对方哪里","最合拍地方","想一起吃的饭","喜欢对方动作","最安心时刻","喜欢对方味道","最珍惜瞬间","想一起看的景","喜欢对方性格","最想一起周末","喜欢对方笑容","想一起养宠物","最想对方陪伴"],
+            //   fight:["比眨眼","比憋笑","比害羞","比安静","比心跳","比手温","比对视","比撒娇","比微笑","比拥抱","比牵手","比情话","比可爱","比温柔","比耐心","比心动","比卖萌","比暖心","比默契","比甜蜜"],
+            //   story:["雨天初见","一日一见","无人岛","交换身份","回到初见","突然消失","瞬移旅行","生病照顾","小家布置","时间暂停","雪地相遇","一封书信","穿越未来","失眠陪伴","露营准备","生气哄你","超能力","海边日落","半夜饥饿","回到过去"],
+            // },
+            "主题·甜蜜":{
+              task:["拥抱10秒","亲脸颊","十指紧扣","背对方","公主抱","喂水果","捏肩膀","唱情歌","牵手","拍照片","夸穿搭","揉腿","逗笑","轻拥抱","靠怀里","讲笑话","亲手背","整理衣领","比心拍照","倒温水"],
+              test:["最爱零食","讨厌蔬菜","手机尾号","喜欢明星","想去海边","喜欢运动","睡前习惯","最爱节日","梦想","依赖地方","性格","小习惯","感动事","放松时刻","想养宠物","喜欢天气","穿衣风格","最爱家人","表情包","小秘密"],
+              truth:["偷偷看手机吗","嫉妒谁","可爱习惯","没说出口的话","最大默契","重新选择吗","想改习惯","珍惜瞬间","喜欢称呼","最美时刻","想去地方","想说情话","吸引点","希望陪伴","初见印象","相处方式","温柔瞬间","想吃饭","改进地方","想看电影"],
+              fight:["比谁先笑","比谁先说话","比谁先拥抱","比谁先牵手","比谁先心动","比谁更温柔","比谁更可爱","比谁更暖心","比谁更默契","比谁更甜蜜","比谁更会撒娇","比谁更会卖萌","比谁更会说情话","比谁更会逗笑","比谁更会对视","比谁更会拥抱","比谁更会牵手","比谁更会心动","比谁更会暖心","比谁更会甜蜜"],
+              story:["游乐园约会","失眠陪伴","小家布置","海边看日出","冬日取暖","夜市逛街","迷路寻找","自驾旅行","不想吃饭","星空告白","每日相见","赏花送花","受伤照顾","图书馆看书","唱歌陪伴","野餐准备","害羞逗乐","古镇游玩","偷懒陪伴","清晨问候"],
+            },
+            "主题·深情":{
+              task:["深情告白","摸脸杀","背后拥抱","贴耳说话","轻咬肩膀","亲吻锁骨","坐腿拥抱","手放怀里","感受心跳","性感眼神","撕咬嘴唇","脱袜子","交换物品","调情话","耳边表白","亲吻足尖","轻咬耳朵","绕耳画圈","解扣子","闭眼亲吻"],
+              test:["最性感瞬间","敏感部位","喜欢姿势","亲吻方式","心动动作","害羞时刻","喜欢场景","迷人部位","脸红话语","拥抱方式","私下称呼","期待事情","心动穿搭","温柔动作","私密事情","敏感细节","温柔话语","心动瞬间","害羞动作","亲密距离"],
+              truth:["吸引你的地方","第一次接触","约会地点","温柔瞬间","私密情话","相处方式","安心时刻","浪漫事情","性格优点","可爱习惯","度过夜晚","拥抱方式","心动动作","秘密基地","喜欢笑容","温柔话语","看风景","牵手习惯","脸红瞬间","惊喜礼物"],
+              fight:["比谁更深情","比谁更认真","比谁更专注","比谁更用心","比谁更体贴","比谁更照顾","比谁更温柔","比谁更暖心","比谁更爱意","比谁更真心","比谁更投入","比谁更真诚","比谁更挚爱","比谁更宠溺","比谁更呵护","比谁更疼爱","比谁更珍惜","比谁更守护","比谁更陪伴","比谁更相爱"],
+              story:["一起看星空","一起变老","一起做饭","一起看海","一起爬山","一起看电影","一起听音乐","一起逛公园","一起养宠物","一起过节日","一起看烟花","一起看日落","一起看日出","一起散步","一起旅行","一起回家","一起学习","一起工作","一起休息","一起生活"],
+            }
+          },
+          shy: {
+            "主题·亲密":{
+              task:["亲密拥抱","温柔亲吻","贴身依靠","亲密牵手","温柔抚摸","亲密对视","亲密拥抱","温柔耳语","亲密贴脸","亲密摸头","亲密揉肩","亲密牵手","亲密拥抱","温柔亲吻","亲密依靠","亲密对视","亲密耳语","亲密贴脸","亲密摸头","亲密揉肩"],
+              test:["亲密瞬间","敏感地带","喜欢方式","心动时刻","害羞动作","亲密场景","迷人瞬间","脸红时刻","亲密话语","温柔动作","心动细节","亲密距离","害羞瞬间","亲密互动","心动感觉","温柔场景","亲密氛围","心动话语","害羞秘密","亲密习惯"],
+              truth:["喜欢亲密吗","心动瞬间","亲密感受","温柔时刻","喜欢动作","亲密距离","害羞时刻","心动感觉","喜欢场景","亲密话语","温柔话语","心动细节","害羞动作","亲密习惯","喜欢感觉","温柔瞬间","心动时刻","亲密体验","害羞心情","喜欢亲密方式"],
+              fight:["亲密比拼","温柔比拼","心动比拼","害羞比拼","甜蜜比拼","暖心比拼","默契比拼","爱意比拼","真心比拼","投入比拼","真诚比拼","挚爱比拼","宠溺比拼","呵护比拼","疼爱比拼","珍惜比拼","守护比拼","陪伴比拼","相爱比拼","亲密比拼"],
+              story:["亲密约会","温柔夜晚","心动时刻","害羞初见","甜蜜旅行","暖心陪伴","默契生活","真心相处","投入相爱","真诚守护","挚爱一生","宠溺永远","呵护全部","疼爱所有","珍惜每秒","守护每天","陪伴每刻","相爱每年","亲密每时","温柔每分"],
+            },
+            "主题·温柔":{
+              task:["温柔拥抱","亲密亲吻","温柔依靠","亲密牵手","温柔抚摸","亲密对视","温柔拥抱","亲密耳语","温柔贴脸","亲密摸头","温柔揉肩","亲密牵手","温柔拥抱","亲密亲吻","温柔依靠","亲密对视","温柔耳语","亲密贴脸","温柔摸头","亲密揉肩"],
+              test:["温柔瞬间","亲密地带","喜欢温柔","心动温柔","害羞温柔","温柔场景","迷人温柔","脸红温柔","温柔话语","亲密动作","心动温柔","温柔距离","害羞温柔","温柔互动","心动温柔","亲密场景","温柔氛围","心动温柔","害羞温柔","亲密习惯"],
+              truth:["喜欢温柔","心动温柔","亲密温柔","温柔时刻","喜欢温柔","温柔距离","害羞温柔","心动温柔","喜欢温柔","温柔话语","亲密话语","心动温柔","害羞温柔","温柔习惯","喜欢温柔","亲密瞬间","心动时刻","温柔体验","害羞心情","喜欢温柔方式"],
+              fight:["温柔比拼","亲密比拼","心动比拼","害羞比拼","甜蜜比拼","暖心比拼","默契比拼","爱意比拼","真心比拼","投入比拼","真诚比拼","挚爱比拼","宠溺比拼","呵护比拼","疼爱比拼","珍惜比拼","守护比拼","陪伴比拼","相爱比拼","温柔比拼"],
+              story:["温柔约会","亲密夜晚","心动时刻","温柔初见","甜蜜旅行","亲密陪伴","默契生活","温柔相处","投入相爱","真诚守护","挚爱一生","温柔永远","亲密全部","温柔所有","珍惜每秒","温柔每天","陪伴每刻","相爱每年","温柔每时","亲密每分"],
+            }
+          }
+        })
+
+        const board = ref([])
+
+        // 初始化棋盘
+        const initBoard = () => {
+          const path = generatePath()
+
+          // 自定义主题：直接用保存的格子内容铺到棋盘
+          if(activeCustomTheme.value){
+            const cells = activeCustomTheme.value.cells
+            board.value = path.map((c,i)=>({
+              ...c,
+              type:    i===0 ? 'start' : i===39 ? 'end' : (cells[i-1]?.type || 'task'),
+              content: i===0 || i===39 ? '' : (cells[i-1]?.content || ''),
+              punish:  i===0 || i===39 ? '' : (cells[i-1]?.punish  || '')
+            }))
+            return
+          }
+
+          // 内置主题：按比例随机生成
+          const total = 38
+          let types = []
+          const t1 = Math.floor(total * rate.value.task / 100)
+          const t2 = Math.floor(total * rate.value.test / 100)
+          const t3 = Math.floor(total * rate.value.truth / 100)
+          const t4 = Math.floor(total * rate.value.fight / 100)
+          const t5 = total - t1 - t2 - t3 - t4
+
+          for(let i=0;i<t1;i++) types.push("task")
+          for(let i=0;i<t2;i++) types.push("test")
+          for(let i=0;i<t3;i++) types.push("truth")
+          for(let i=0;i<t4;i++) types.push("fight")
+          for(let i=0;i<t5;i++) types.push("story")
+
+          for(let i = types.length - 1; i > 0; i--){
+            let j = Math.floor(Math.random()*(i+1))
+            ;[types[i],types[j]] = [types[j],types[i]]
+          }
+
+          board.value = path.map((c,i)=>({
+            ...c,
+            type:i===0?"start":i===39?"end":types.pop()||"task"
+          }))
+        }
+
+        // 编辑模式下渲染用的 board（同样的路径坐标 + editingCustom 的格子类型）
+        const editBoard = computed(() => {
+          if(!editingCustom.value) return []
+          const path = generatePath()
+          return path.map((c,i)=>({
+            ...c,
+            type: i===0 ? 'start' : i===39 ? 'end' : (editingCustom.value.cells[i-1]?.type || null)
+          }))
+        })
+
+        const initGame = (mode) => {
+          // 自定义模式走单独入口（编辑或列表）
+          if(mode === 'custom'){
+            enterCustom()
+            return
+          }
+          currentMode.value = mode
+          view.value = "game"
+          playerPos.value = [0,0]
+          currentPlayer.value = 0
+          diceState.value = 'initial'
+          activeCustomTheme.value = null
+          if(mode==='love'){
+            currentSubTheme.value = '主题·心动'
+          }else{
+            currentSubTheme.value = '主题·亲密'
+          }
+          initBoard()
+        }
+
+        const getCellBg = (i) => {
+          if(i===0 || i===39) return ""
+          const colorMap = {
+            task:"bg-purple-400",
+            test:"bg-emerald-400",
+            truth:"bg-pink-400",
+            fight:"bg-orange-400",
+            story:"bg-sky-400"
+          }
+          return colorMap[board.value[i].type] || "bg-white"
+        }
+
+        // 3D 骰子结果态的定格 transform
+        const diceTransform = computed(() => {
+          if(diceState.value !== 'result') return ''
+          const a = angleList[diceValue.value - 1]
+          return `transform: rotateX(${a.x}deg) rotateY(${a.y}deg)`
+        })
+
+        // 回合切换 → 切换页面底色（女生粉、男生蓝）
+        watchEffect(() => {
+          document.body.style.background =
+            (view.value === 'game' && currentPlayer.value === 1) ? BG_MALE : BG_FEMALE
+        })
+
+        // 掷骰子
+        const roll = () => {
+          if(diceState.value !== 'initial') return
+          diceState.value = 'rolling'
+          setTimeout(()=>{
+            diceValue.value = Math.floor(Math.random()*6)+1
+            diceState.value = 'result'
+            move()
+          }, ROLL_DURATION)
+        }
+
+        // 移动
+        const move = async () => {
+          let idx = currentPlayer.value
+          let step = diceValue.value
+          movingPlayer.value = idx
+          moveStep.value = 0
+          for(let i=0;i<step;i++){
+            if(playerPos.value[idx]>=39) break
+            playerPos.value[idx]++
+            moveStep.value++
+            await new Promise(res=>setTimeout(res,300))
+          }
+          movingPlayer.value = null
+          setTimeout(()=>triggerEvent(playerPos.value[idx]),200)
+        }
+
+        // 棋子精灵图样式：站立显示 frame-1，移动时交替 frame-2 / frame-3
+        // 精灵图原方向朝右；朝左走时镜像（scaleX(-1)），其他方向保持原方向
+        const getPieceStyle = (playerIdx) => {
+          const url = playerIdx === 0
+            ? '../miniprogram/assets/splitsheet/women.png'
+            : '../miniprogram/assets/splitsheet/man.png'
+          let frame = 0 // 0 = frame-1（站立）
+          if(movingPlayer.value === playerIdx){
+            frame = (moveStep.value % 2 === 0) ? 1 : 2 // frame-2 / frame-3 交替
+          }
+          // 原图 440x140，每帧 140x140，间隔 10px。缩放 0.3 → 42x42，位置 0 / -45 / -90
+          const positions = ['0px', '-45px', '-90px']
+
+          // 比较当前格与上一格的 x 坐标判断朝向：x 减小则朝左
+          // 起点（pos=0）没有上一格，改用下一格预判朝向（路径首段是向左）
+          let mirrored = false
+          const pos = playerPos.value[playerIdx]
+          if(pos > 0 && board.value[pos] && board.value[pos - 1]){
+            mirrored = board.value[pos].x < board.value[pos - 1].x
+          } else if(pos === 0 && board.value[0] && board.value[1]){
+            mirrored = board.value[1].x < board.value[0].x
+          }
+
+          return {
+            width: '42px',
+            height: '42px',
+            backgroundImage: `url(${url})`,
+            backgroundSize: '132px 42px',
+            backgroundPosition: `${positions[frame]} 0px`,
+            backgroundRepeat: 'no-repeat',
+            transform: mirrored ? 'scaleX(-1)' : 'none'
+          }
+        }
+
+        // 触发任务
+        const triggerEvent = (pos) => {
+          // 掷骰后用户已离开游戏页面（点了🏠返回首页等），不要再弹任务弹窗
+          if(view.value !== 'game') return
+
+          const cell = board.value[pos]
+          const user = currentPlayer.value===0?"女生":"男生"
+
+          if(pos===39){
+            modal.value = {show:true,title:"🎉游戏胜利",content:`恭喜${user}抵达终点！`,icon:"../miniprogram/assets/win.png"}
+            isFightTask.value = false
+            return
+          }
+
+          const type = cell.type
+          isFightTask.value = (type === 'fight')
+
+          let content = ""
+
+          // 自定义主题：用格子里存好的内容
+          if(activeCustomTheme.value){
+            content = cell.content || '继续前进'
+            if(type === 'test' && cell.punish) content += "\n\n失败惩罚：" + cell.punish
+          } else {
+            // 内置主题：从题库随机抽
+            const lib = libraries.value[currentMode.value][currentSubTheme.value]
+            if(type==="test"){
+              const q = lib.test[Math.floor(Math.random()*lib.test.length)]
+              const punish = lib.punish ? lib.punish[Math.floor(Math.random()*lib.punish.length)] : "接受小惩罚"
+              content = q + "\n\n失败惩罚：" + punish
+            }else{
+              const list = lib[type] || lib.task
+              content = list[Math.floor(Math.random()*list.length)]
+            }
+          }
+
+          const iconMap = {
+            task:  "../miniprogram/assets/type-renwu.png",
+            test:  "../miniprogram/assets/type-shuangren.png",
+            truth: "../miniprogram/assets/type-zhenxinhua.png",
+            fight: "../miniprogram/assets/type-duikang.png",
+            story: "../miniprogram/assets/type-juqing.png"
+          }
+          modal.value = {show:true,title:`${user}任务`,content:content,icon:iconMap[type]}
+        }
+
+        // ========== 关键修复：关闭弹窗后切换玩家 ==========
+        const closeNormalModal = () => {
+          modal.value.show = false
+          // 轮流切换男女
+          currentPlayer.value = currentPlayer.value === 0 ? 1 : 0
+          diceState.value = 'initial'
+        }
+
+        // 对抗结果：胜方让败方后退6步
+        const fightResult = (winner) => {
+          modal.value.show = false
+          if(winner === 'boy'){
+            // 男方胜 → 女方后退6步
+            playerPos.value[0] = Math.max(0, playerPos.value[0] - 6)
+          }else{
+            // 女方胜 → 男方后退6步
+            playerPos.value[1] = Math.max(0, playerPos.value[1] - 6)
+          }
+          // 修复：对抗结束也切换回合
+          currentPlayer.value = currentPlayer.value === 0 ? 1 : 0
+          diceState.value = 'initial'
+        }
+
+        // 比例
+        const openRateModal = ()=>rateModal.value = true
+        const saveRate = () => {
+          const sum = rate.value.task + rate.value.test + rate.value.truth + rate.value.fight + rate.value.story
+          if(sum!==100){ alert("总和必须100%"); return }
+          rateModal.value = false
+          initBoard()
+        }
+
+        // 子主题
+        const openThemeModal = ()=>themeModal.value = true
+        const selectSubTheme = (name) => {
+          currentSubTheme.value = name
+          themeModal.value = false
+          // 自定义主题命中
+          const custom = customThemes.value.find(t => t.name === name)
+          activeCustomTheme.value = custom || null
+          initBoard()
+        }
+
+        // ============ 自定义飞行棋：入口 / 编辑 / 保存 / 列表 ============
+
+        // 进入「自定义飞行棋」入口：有已保存的进列表，否则直接进入新建
+        const enterCustom = () => {
+          currentMode.value = 'custom'
+          if(customThemes.value.length === 0){
+            startNewCustom()
+          } else {
+            view.value = 'custom-list'
+          }
+        }
+
+        // 新建空白草稿，进入编辑视图
+        const startNewCustom = () => {
+          editingCustom.value = { id: null, name: '', cells: makeEmptyCells() }
+          editingCellIdx.value = 1
+          view.value = 'custom-edit'
+        }
+
+        // 创建按钮：检查配额
+        const tryCreateCustom = () => {
+          if(customThemes.value.length >= customQuota.value){
+            limitAlert.value = true
+            return
+          }
+          startNewCustom()
+        }
+
+        // 直接以某个自定义主题进入游戏（列表卡片点击）
+        const playCustomTheme = (theme) => {
+          currentMode.value = 'love'
+          currentSubTheme.value = theme.name
+          activeCustomTheme.value = theme
+          playerPos.value = [0,0]
+          currentPlayer.value = 0
+          diceState.value = 'initial'
+          view.value = 'game'
+          initBoard()
+        }
+
+        // 加载已有自定义主题进入编辑
+        const editCustom = (id) => {
+          const t = customThemes.value.find(x => x.id === id)
+          if(!t) return
+          editingCustom.value = {
+            id: t.id,
+            name: t.name,
+            cells: t.cells.map(c => ({ ...c }))
+          }
+          editingCellIdx.value = 1
+          view.value = 'custom-edit'
+        }
+
+        // 删除（二次确认）
+        const askDeleteCustom = (id) => { deleteConfirm.value = { show: true, id } }
+        const confirmDeleteCustom = () => {
+          customThemes.value = customThemes.value.filter(t => t.id !== deleteConfirm.value.id)
+          persistCustom()
+          deleteConfirm.value = { show: false, id: null }
+        }
+
+        // 「分享解锁」每次 +1 名额，并直接进入新建
+        const shareUnlock = () => {
+          customQuota.value++
+          persistCustom()
+          limitAlert.value = false
+          startNewCustom()
+        }
+
+        // 没选类型时默认选中「普通任务」
+        const ensureCellDefaultType = (idx) => {
+          if(!editingCustom.value) return
+          const cell = editingCustom.value.cells[idx - 1]
+          if(cell && !cell.type) cell.type = 'task'
+        }
+
+        // 编辑棋盘：点击格子
+        const openCellEdit = (idx) => {
+          if(idx === 0 || idx === 39) return
+          editingCellIdx.value = idx
+          ensureCellDefaultType(idx)
+          cellEditModal.value = true
+        }
+
+        // 编辑棋盘格子的背景色
+        const getEditCellBg = (i) => {
+          if(i===0 || i===39) return ""
+          if(!editingCustom.value) return "bg-gray-200"
+          const t = editingCustom.value.cells[i-1]?.type
+          if(!t) return "bg-gray-200"
+          const colorMap = {
+            task:"bg-purple-400",
+            test:"bg-emerald-400",
+            truth:"bg-pink-400",
+            fight:"bg-orange-400",
+            story:"bg-sky-400"
+          }
+          return colorMap[t] || "bg-white"
+        }
+
+        // 选中格子类型
+        const setEditingType = (key) => {
+          if(!editingCustom.value) return
+          editingCustom.value.cells[editingCellIdx.value - 1].type = key
+        }
+
+        // 「下一格」：保存并切到下一个可编辑格
+        const saveCellAndNext = () => {
+          if(editingCellIdx.value < 38){
+            editingCellIdx.value++
+            ensureCellDefaultType(editingCellIdx.value)
+          } else {
+            cellEditModal.value = false
+          }
+        }
+
+        // 列表显示用：已填格子数
+        const countFilled = (theme) => theme.cells.filter(c => c.type).length
+
+        // 打开命名保存弹窗
+        const openSaveName = () => {
+          customNameInput.value = editingCustom.value?.name || ''
+          saveNameModal.value = true
+        }
+
+        // 命名保存 → 跳转情侣飞行棋以该自定义主题开局
+        const confirmSaveName = () => {
+          const name = customNameInput.value.trim()
+          if(!name){ alert('请输入主题名称'); return }
+          if(!editingCustom.value) return
+
+          let saved
+          if(editingCustom.value.id){
+            const idx = customThemes.value.findIndex(t => t.id === editingCustom.value.id)
+            if(idx !== -1){
+              customThemes.value[idx] = {
+                ...customThemes.value[idx],
+                name,
+                cells: editingCustom.value.cells.map(c => ({ ...c }))
+              }
+              saved = customThemes.value[idx]
+            }
+          } else {
+            saved = {
+              id: 'cs_' + Date.now(),
+              name,
+              cells: editingCustom.value.cells.map(c => ({ ...c }))
+            }
+            customThemes.value.push(saved)
+            editingCustom.value.id = saved.id
+          }
+          persistCustom()
+          saveNameModal.value = false
+
+          // 跳转情侣飞行棋，使用刚保存的自定义主题
+          currentMode.value = 'love'
+          currentSubTheme.value = saved.name
+          activeCustomTheme.value = saved
+          playerPos.value = [0,0]
+          currentPlayer.value = 0
+          diceState.value = 'initial'
+          view.value = 'game'
+          initBoard()
+        }
+
+        const goHome = () => {
+          view.value = "home"
+          // 关掉可能因延时还没显示的任务弹窗
+          modal.value.show = false
+        }
+
+        return {
+          view,modes,currentMode,board,playerPos,currentPlayer,
+          diceValue,diceState,diceTransform,modal,isFightTask,
+          rateModal,themeModal,rate,subThemes,currentSubTheme,currentSubThemes,
+          movingPlayer,moveStep,getPieceStyle,
+          initGame,getCellBg,roll,move,triggerEvent,closeNormalModal,fightResult,
+          openRateModal,saveRate,openThemeModal,selectSubTheme,goHome,
+          // 自定义飞行棋
+          customThemes,customQuota,editingCustom,editingCellIdx,
+          cellEditModal,saveNameModal,customNameInput,deleteConfirm,limitAlert,
+          activeCustomTheme,cellTypes,editBoard,
+          enterCustom,startNewCustom,tryCreateCustom,editCustom,playCustomTheme,
+          askDeleteCustom,confirmDeleteCustom,shareUnlock,
+          openCellEdit,getEditCellBg,setEditingType,saveCellAndNext,
+          countFilled,openSaveName,confirmSaveName
+        }
+      }
+    }).mount("#app")
+  </script>
+</body>
+</html>

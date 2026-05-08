@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>3D骰子（动画保留+停止只显正面）</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #f8f9fc;
+    }
+
+    .dice-wrapper {
+      position: relative;
+      width: 60px;
+      height: 60px;
+      /* transform: scale(4); */
+    }
+
+    /* 3D骰子容器 */
+    .dice-box {
+      position: relative;
+      width: 60px;
+      height: 60px;
+      transform-style: preserve-3d;
+      transition: transform 0.4s ease-out;
+    }
+
+    /* 摇晃动画 —— 完全保留你原来的效果！*/
+    .dice-rolling {
+      animation: diceRoll 0.7s ease-in-out infinite;
+    }
+
+    @keyframes diceRoll {
+      0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+      20% { transform: rotateX(120deg) rotateY(90deg) rotateZ(45deg); }
+      40% { transform: rotateX(240deg) rotateY(180deg) rotateZ(90deg); }
+      60% { transform: rotateX(360deg) rotateY(270deg) rotateZ(180deg); }
+      80% { transform: rotateX(480deg) rotateY(360deg) rotateZ(270deg); }
+      100% { transform: rotateX(720deg) rotateY(540deg) rotateZ(360deg); }
+    }
+
+    /* 骰子面：真实阴影质感 */
+    .dice-face {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      background: #fff;
+      border-radius: 10px;
+      display: flex;
+      padding: 8px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1), inset 0 0 6px rgba(0,0,0,0.05);
+    }
+
+    /* 六个面定位 */
+    .dice-front  { transform: rotateY(0deg) translateZ(30px); }
+    .dice-back   { transform: rotateY(180deg) translateZ(30px); }
+    .dice-left   { transform: rotateY(-90deg) translateZ(30px); }
+    .dice-right  { transform: rotateY(90deg) translateZ(30px); }
+    .dice-top    { transform: rotateX(90deg) translateZ(30px); }
+    .dice-bottom { transform: rotateX(-90deg) translateZ(30px); }
+
+    /* 骰子点 */
+    .dot {
+      width: 13px;
+      height: 13px;
+      background: #111;
+      border-radius: 50%;
+    }
+
+    .dice-1 { justify-content: center; align-items: center; }
+    .dice-2 { justify-content: space-between; align-items: flex-start; }
+    .dice-2 .dot:nth-child(2) { align-self: flex-end; }
+    .dice-3 { justify-content: space-between; }
+    .dice-3 .dot:nth-child(2) { align-self: center; }
+    .dice-3 .dot:nth-child(3) { align-self: flex-end; }
+    .dice-4, .dice-5, .dice-6 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .dice-5 .dot-center { grid-column: 1 / 3; justify-self: center; }
+    .dice-6 { grid-template-rows: repeat(3, 1fr); }
+
+    /* 底部阴影 */
+    .dice-shadow {
+      position: absolute;
+      bottom: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 50px;
+      height: 10px;
+      background: radial-gradient(ellipse, rgba(0,0,0,0.15) 0%, transparent 70%);
+      border-radius: 50%;
+      opacity: 0.8;
+    }
+
+    #rollBtn {
+      margin-top: 50px;
+      padding: 10px 24px;
+      background: #ff6b6b;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #rollBtn:disabled {
+      background: #ccc;
+    }
+  </style>
+</head>
+
+<body>
+  <div style="position: relative;">
+    <div class="dice-wrapper">
+      <div class="dice-box" id="diceBox">
+        <div class="dice-face dice-front dice-1"><div class="dot"></div></div>
+        <div class="dice-face dice-back dice-2"><div class="dot"></div><div class="dot"></div></div>
+        <div class="dice-face dice-left dice-3"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+        <div class="dice-face dice-right dice-4"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+        <div class="dice-face dice-top dice-5"><div class="dot"></div><div class="dot"></div><div class="dot dot-center"></div><div class="dot"></div><div class="dot"></div></div>
+        <div class="dice-face dice-bottom dice-6"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+      </div>
+      <div class="dice-shadow"></div>
+    </div>
+
+    <button id="rollBtn">掷骰子</button>
+  </div>
+
+  <script>
+    const diceBox = document.getElementById('diceBox')
+    const rollBtn = document.getElementById('rollBtn')
+    let isRolling = false
+
+    // 重点：停止时角度 → 全部正对镜头，绝不露侧面！
+    const finalRotations = [
+      { x: 0, y: 0 },    // 1
+      { x: 0, y: 180 },  // 2
+      { x: 0, y: 90 },   // 3
+      { x: 0, y: -90 },  // 4
+      { x: 180, y: 0 },  // 5
+      { x: 0, y: 0 }     // 6
+    ]
+
+    // 掷骰子
+    function rollDice() {
+      if (isRolling) return
+      isRolling = true
+      rollBtn.disabled = true
+
+      // 开启动画（完全保留原来的）
+      diceBox.classList.add('dice-rolling')
+
+      const num = Math.floor(Math.random() * 6) + 1
+      const pos = finalRotations[num - 1]
+
+      setTimeout(() => {
+        diceBox.classList.remove('dice-rolling')
+        // 停止时 → 只正对显示一个面，无侧面！
+        diceBox.style.transform = `rotateX(${pos.x}deg) rotateY(${pos.y}deg)`
+        isRolling = false
+        rollBtn.disabled = false
+      }, 2000)
+    }
+
+    // 重置骰子（任务完成后调用）
+    window.resetDice = function() {
+      diceBox.classList.remove('dice-rolling')
+      diceBox.style.transform = 'rotateX(0deg) rotateY(0deg)'
+      isRolling = false
+    }
+
+    rollBtn.addEventListener('click', rollDice)
+  </script>
+</body>
+</html>
