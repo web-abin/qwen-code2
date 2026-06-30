@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "ci:preview": "acmp preview --qr-format image",
+    "ci:upload": "acmp upload"
+  },
+  "devDependencies": {
+    "auto-control-miniprogram": "^0.2.0"
+  }
+}

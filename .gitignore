@@ -62,3 +62,7 @@ htmlcov/
 *.tar.xz
 *.tar.zst
 ```
+
+# auto-control-miniprogram
+.keys/
+qrcode.jpg
